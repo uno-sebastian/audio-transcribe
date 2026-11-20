@@ -15,6 +15,19 @@ import tempfile
 from pathlib import Path
 
 
+def add_cuda_dlls() -> None:
+    """Make pip-installed CUDA libs (nvidia-cublas-cu12, nvidia-cudnn-cu12) findable on Windows."""
+    import os
+    import site
+
+    for base in site.getsitepackages():
+        for lib in ("cublas", "cudnn"):
+            d = Path(base) / "nvidia" / lib / "bin"
+            if d.is_dir():
+                os.add_dll_directory(str(d))
+                os.environ["PATH"] = str(d) + os.pathsep + os.environ["PATH"]
+
+
 def extract_audio(src: Path, dst: Path) -> None:
     """Convert any audio/video file to 16 kHz mono WAV with ffmpeg."""
     cmd = [
@@ -49,6 +62,7 @@ def main() -> None:
     if not args.input.exists():
         sys.exit(f"File not found: {args.input}")
 
+    add_cuda_dlls()
     from faster_whisper import WhisperModel  # imported late so --help is fast
 
     args.out.mkdir(parents=True, exist_ok=True)

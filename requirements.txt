@@ -1,1 +1,5 @@
 faster-whisper
+av>=14,<17  # newer PyAV breaks faster-whisper 1.2.x
+# GPU (NVIDIA) support on Windows; skip these if running CPU-only
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
