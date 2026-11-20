@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Transcribe audio or video files (iPhone .m4a/.mov/.mp4 etc.) to text.
+
+ffmpeg converts any input to 16 kHz mono WAV first, so video and audio
+go through the same path. Engine: faster-whisper (English).
+
+Usage:
+    python transcribe.py path/to/file.m4a
+    python transcribe.py path/to/video.mov --model large-v3 --out transcripts
+"""
+import argparse
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+def extract_audio(src: Path, dst: Path) -> None:
+    """Convert any audio/video file to 16 kHz mono WAV with ffmpeg."""
+    cmd = [
+        "ffmpeg", "-y", "-i", str(src),
+        "-vn",              # drop video stream
+        "-ac", "1",         # mono
+        "-ar", "16000",     # 16 kHz
+        str(dst),
+    ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+    except FileNotFoundError:
+        sys.exit("ffmpeg not found. Install it (e.g. `winget install Gyan.FFmpeg`) and reopen your terminal.")
+    except subprocess.CalledProcessError as e:
+        sys.exit(f"ffmpeg failed:\n{e.stderr.decode(errors='replace')}")
+
+
+def fmt_ts(seconds: float) -> str:
+    h, rem = divmod(int(seconds), 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("input", type=Path, help="audio or video file")
+    p.add_argument("--model", default="large-v3", help="faster-whisper model (default: large-v3)")
+    p.add_argument("--device", default="auto", help="auto, cpu, or cuda")
+    p.add_argument("--out", type=Path, default=Path("transcripts"), help="output folder")
+    args = p.parse_args()
+
+    if not args.input.exists():
+        sys.exit(f"File not found: {args.input}")
+
+    from faster_whisper import WhisperModel  # imported late so --help is fast
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        wav = Path(tmp) / "audio.wav"
+        print(f"Extracting audio from {args.input.name} ...")
+        extract_audio(args.input, wav)
+
+        print(f"Loading model {args.model} ...")
+        model = WhisperModel(args.model, device=args.device, compute_type="auto")
+
+        print("Transcribing ...")
+        segments, info = model.transcribe(
+            str(wav),
+            language="en",
+            vad_filter=True,                  # skip silence; reduces hallucinations
+            condition_on_previous_text=False, # avoids repeat loops on long audio
+        )
+
+        txt_path = args.out / f"{args.input.stem}.txt"
+        with open(txt_path, "w", encoding="utf-8") as f:
+            for seg in segments:
+                line = f"[{fmt_ts(seg.start)}] {seg.text.strip()}"
+                print(line)
+                f.write(line + "\n")
+
+    print(f"\nSaved: {txt_path}")
+
+
+if __name__ == "__main__":
+    main()
