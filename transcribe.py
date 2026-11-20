@@ -79,7 +79,11 @@ def main() -> None:
             str(wav),
             language="en",
             vad_filter=True,                  # skip silence; reduces hallucinations
-            condition_on_previous_text=False, # avoids repeat loops on long audio
+            # Keeping context lets the model carry capitalization/punctuation
+            # style forward; turning it off made output all-lowercase.
+            condition_on_previous_text=True,
+            initial_prompt="Hello. This is a conversation, transcribed with proper punctuation and capitalization.",
+            temperature=[0.0, 0.2, 0.4],      # fall back if decoding gets stuck in a loop
         )
 
         txt_path = args.out / f"{args.input.stem}.txt"
