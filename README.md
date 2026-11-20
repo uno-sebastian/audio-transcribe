@@ -30,6 +30,16 @@ python transcribe.py recording.m4a --engine parakeet
 python transcribe.py clip.mov --model medium --device cpu
 ```
 
+## Compare two engines
+
+Run both engines, then list every spot where they disagree, with timestamps:
+
+```powershell
+python compare.py transcripts	alk.whisper.txt transcripts	alk.parakeet.txt --ignore-fillers
+```
+
+Where the engines agree the text is probably right; the differing spots are where to listen and fix by hand.
+
 ## iPhone file formats
 
 - Voice Memos: `.m4a` (AAC). Share/AirDrop/export from the Voice Memos app.
@@ -38,4 +48,3 @@ python transcribe.py clip.mov --model medium --device cpu
 ## Roadmap
 
 - Speaker labels (pyannote diarization)
-- Diff two engines' output to find spots needing cleanup
