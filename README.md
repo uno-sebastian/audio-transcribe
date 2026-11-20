@@ -8,8 +8,10 @@ Everything runs on your machine; no audio is uploaded anywhere.
 ## How it works
 
 1. `ffmpeg` strips any input down to 16 kHz mono WAV (video is just audio extraction).
-2. [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`large-v3`) transcribes it with timestamps.
-3. Output goes to `transcripts/<name>.txt`.
+2. One of two engines transcribes it with timestamps:
+   - `whisper` (default): [faster-whisper](https://github.com/SYSTRAN/faster-whisper) `large-v3`, runs on an NVIDIA GPU.
+   - `parakeet`: NVIDIA Parakeet TDT 0.6B v2 (English) through [onnx-asr](https://github.com/istupakov/onnx-asr), runs on CPU.
+3. Output goes to `transcripts/<name>.<engine>.txt`, so both engines' results can sit side by side.
 
 ## Setup (Windows)
 
@@ -23,7 +25,8 @@ pip install -r requirements.txt
 ## Use
 
 ```powershell
-python transcribe.py recording.m4a
+python transcribe.py recording.m4a --device cuda
+python transcribe.py recording.m4a --engine parakeet
 python transcribe.py clip.mov --model medium --device cpu
 ```
 
@@ -34,6 +37,5 @@ python transcribe.py clip.mov --model medium --device cpu
 
 ## Roadmap
 
-- Parakeet TDT engine as a second opinion on English audio
 - Speaker labels (pyannote diarization)
 - Diff two engines' output to find spots needing cleanup

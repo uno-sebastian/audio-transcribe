@@ -1,4 +1,5 @@
 faster-whisper
+onnx-asr[cpu,hub]  # Parakeet engine
 av>=14,<17  # newer PyAV breaks faster-whisper 1.2.x
 # GPU (NVIDIA) support on Windows; skip these if running CPU-only
 nvidia-cublas-cu12
